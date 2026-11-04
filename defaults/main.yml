@@ -1,0 +1,30 @@
+---
+otel_agent_version: "latest"
+otel_agent_type: contrib
+
+# OpenTelemetry Collector service configuration
+otel_agent_service_name: "otel-collector-agent"
+otel_agent_installation_dir: "/etc/otel-collector-agent"
+
+# Download information for the OpenTelemetry Collector binary
+otel_agent_executable: "{% if otel_agent_type == 'contrib' %}otelcol-contrib{% else %}otelcol{% endif %}"
+arch_mapping:
+  x86_64: amd64
+  aarch64: arm64
+  armv7l: armhf
+  i386: i386
+  ppc64le: ppc64le
+otel_agent_arch: "{{ arch_mapping[ansible_facts['architecture']] | default('amd64') }}"
+otel_agent_binary_url: "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v{{ otel_agent_version }}/{% if otel_agent_type == 'contrib' %}otelcol-contrib_{{ otel_agent_version }}_linux_{{ otel_agent_arch }}{% else %}otelcol_{{ otel_agent_version }}_linux_{{ otel_agent_arch }}{% endif %}.tar.gz"
+otel_agent_latest_url: 'https://api.github.com/repos/open-telemetry/opentelemetry-collector-releases/releases/latest'
+
+
+#
+# OTel Collector configuration variables
+#
+otel_agent_receivers: {}
+otel_agent_processors: {}
+otel_agent_exporters: {}
+otel_agent_extensions: {}
+otel_agent_service: {}
+otel_agent_connectors: {}

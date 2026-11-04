@@ -1,0 +1,24 @@
+{% if otel_agent_receivers is defined and otel_agent_receivers | length > 0 %}
+receivers:
+{{ otel_agent_receivers | to_nice_yaml(indent=2) | indent(2, true) }}
+{% endif %}
+{% if otel_agent_processors is defined and otel_agent_processors | length > 0 %}
+processors:
+{{ otel_agent_processors | to_nice_yaml(indent=2) | indent(2, true) }}
+{% endif %}
+{% if otel_agent_exporters is defined and otel_agent_exporters | length > 0 %}
+exporters:
+{{ otel_agent_exporters | to_nice_yaml(indent=2) | indent(2, true) }}
+{% endif %}
+{% if otel_agent_extensions is defined and otel_agent_extensions | length > 0 %}
+extensions:
+{{ otel_agent_extensions | to_nice_yaml(indent=2) | indent(2, true) }}
+{% endif %}
+{% if otel_agent_service is defined and otel_agent_service | length > 0 %}
+service:
+{{ otel_agent_service | to_nice_yaml(indent=2) | indent(2, true) }}
+{% endif %}
+{% if otel_agent_connectors is defined and otel_agent_connectors | length > 0 %}
+connectors:
+{{ otel_agent_connectors | to_nice_yaml(indent=2) | indent(2, true) }}
+{% endif %}

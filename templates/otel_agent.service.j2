@@ -1,0 +1,14 @@
+[Unit]
+Description=OpenTelemetry Collector Agent
+After=network.target
+
+[Service]
+Type=simple
+ExecStart={{ otel_agent_installation_dir }}/{{ otel_agent_executable }} --config={{ otel_agent_installation_dir }}/config.yml
+User=root
+Group=root
+Restart=on-failure
+StateDirectory={{ otel_agent_service_name }}
+
+[Install]
+WantedBy=multi-user.target

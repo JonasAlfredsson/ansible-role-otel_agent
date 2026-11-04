@@ -1,0 +1,35 @@
+---
+- name: Download OpenTelemetry Collector binary
+  ansible.builtin.get_url:
+    url: "{{ otel_agent_binary_url }}"
+    dest: "/tmp/otelcol-{{ otel_agent_type }}-{{ otel_agent_version }}.tar.gz"
+    mode: '0755'
+
+- name: Install and clean up
+  block:
+    - name: Remove existing OpenTelemetry Collector installation directory
+      ansible.builtin.file:
+        path: "{{ otel_agent_installation_dir }}"
+        state: absent
+
+    - name: Create OpenTelemetry Collector installation directory
+      ansible.builtin.file:
+        path: "{{ otel_agent_installation_dir }}"
+        state: directory
+        mode: '0755'
+        owner: "root"
+        group: "root"
+
+    - name: Extract OpenTelemetry Collector binary
+      ansible.builtin.unarchive:
+        src: "/tmp/otelcol-{{ otel_agent_type }}-{{ otel_agent_version }}.tar.gz"
+        dest: "{{ otel_agent_installation_dir }}"
+        remote_src: yes
+      register: extract_result
+      when: not ansible_check_mode
+
+  always:
+    - name: Remove downloaded OpenTelemetry Collector binary
+      ansible.builtin.file:
+        path: "/tmp/otelcol-{{ otel_agent_type }}-{{ otel_agent_version }}.tar.gz"
+        state: absent

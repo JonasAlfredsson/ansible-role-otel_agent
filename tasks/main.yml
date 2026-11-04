@@ -1,0 +1,54 @@
+---
+- name: Discover latest version
+  ansible.builtin.set_fact:
+    otel_agent_version: "{{ (lookup('url', otel_agent_latest_url, split_lines=False) | from_json).get('tag_name') | replace('v', '') }}"
+  run_once: true
+  until: otel_agent_version is version('0.0.0', '>=')
+  retries: 10
+  when: otel_agent_version == 'latest'
+
+- name: Discover installed version
+  block:
+    - name: Get installed version
+      ansible.builtin.command: '{{ otel_agent_installation_dir }}/{{ otel_agent_executable }} -v'
+      register: otel_agent_version_check
+      changed_when: false
+      failed_when: false
+      check_mode: false  # Always run, this does not change anything on the system
+
+    - name: Set installed version variable
+      ansible.builtin.set_fact:
+        otel_agent_installed_version: "{{ otel_agent_version_check.stdout_lines[0] | default('otelcorecol version 0.0.0') | ansible.builtin.regex_search('\\d+\\.\\d+\\.\\d+') }}"
+
+- name: Install the OTel Collector binary
+  include_tasks: install.yml
+  when: otel_agent_installed_version is version(otel_agent_version, '!=')
+
+- name: Deploy OpenTelemetry Collector configuration file
+  ansible.builtin.template:
+    src: otel_agent_config.yml.j2
+    dest: "{{ otel_agent_installation_dir }}/config.yml"
+    owner: "root"
+    group: "root"
+    mode: '0640'
+    validate: '{{ otel_agent_installation_dir }}/{{ otel_agent_executable }} --config=%s validate'
+  register: otel_agent_config
+
+- name: Copy OpenTelemetry Collector systemd unit file
+  ansible.builtin.template:
+    src: otel_agent.service.j2
+    dest: /etc/systemd/system/{{ otel_agent_service_name }}.service
+    mode: '0644'
+  register: otel_agent_service_unit
+
+- name: Reload systemd daemon to pick up changes
+  ansible.builtin.systemd:
+    daemon_reload: yes
+  when: otel_agent_service_unit.changed
+
+- name: Ensure OpenTelemetry Collector service is enabled and running
+  ansible.builtin.service:
+    name: "{{ otel_agent_service_name }}"
+    enabled: yes
+    state: "{{ 'restarted' if otel_agent_config.changed or otel_agent_service_unit.changed else 'started' }}"
+  ignore_errors: '{{ ansible_check_mode | bool }}'
