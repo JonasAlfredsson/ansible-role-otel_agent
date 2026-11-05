@@ -2,14 +2,14 @@
 
 This role will deploy the [OTel Collector][1] as an "[agent][3]" on the targeted
 machine for enrichment of all metrics collected from the local services. What
-this means is that all services running on the targeted machine should send all of their
-OTel stuff directly to _this_ collector, which can then add extra host
+this means is that all services running on the targeted machine should send all
+of their OTel stuff directly to _this_ collector, which can then add extra host
 information, buffer and retry sending the data to the backend database. This
-can significatnly simplify auth, encryption and retry logic to a single place
+can significantly simplify auth, encryption and retry logic to a single place
 instead of handling it in every separate service.
 
 This role is a rewrite and simplification of the [opentelemetry_collector][2]
-role managed by Grafana, but you will still find a lot of similarites between
+role managed by Grafana, but you will still find a lot of similarities between
 them. I did this just to learn and to make it better suited for my setup.
 
 
@@ -73,7 +73,7 @@ setup.
 
 ### Recievers
 This section contains all the configuration that I have added to the
-`otel_agent_receivers` varaiable.
+`otel_agent_receivers` variable.
 
 A "reciever" is just something that is able to collect data in some way, either
 actively or by just listening for incoming messages.
@@ -96,13 +96,13 @@ otlp:
 > on how to NOT expose the collector's ports outside localhost, while still
 > routing the Docker container traffic to it.
 
-**host_metrics** is a reciever which is able to collect data about your host
-machine. I have actually split it into two separate recievers, one "fast" and
+**host_metrics** is a receiver which is able to collect data about your host
+machine. I have actually split it into two separate receivers, one "fast" and
 one "slow" to not have to call on the "heavy" queries that are needed in
 collecting some of the metrics here.
 
 > NOTE: the name after the `/` is just an identifier and has no function beyond
-> that, so call them whatevery you want.
+> that, so call them whatever you want.
 ```yaml
 host_metrics/fast:
   # These are quick to gather, and change often, so we check these every 10s.
@@ -133,7 +133,7 @@ host_metrics/slow:
 ```
 
 **journal** is able to just tail the system log and send them to the backend.
-But to make the collecctor faster to start we just atatch to the stream, and
+But to make the collector faster to start we just attach to the stream, and
 do not try to parse the system log from the beginning on every service restart.
 ```yaml
 journald/system:
@@ -141,7 +141,7 @@ journald/system:
   start_at: end
 ```
 However, the `dmesg` log starts way before the collector is ready, so here we
-just print the kernel log and start from the begining every time, which should
+just print the kernel log and start from the beginning every time, which should
 be fine since these log lines are far fewer.
 ```yaml
 journald/dmesg:
@@ -152,7 +152,7 @@ journald/dmesg:
 
 ### Processors
 This section contains all the configuration that I have added to the
-`otel_agent_processors` varaiable.
+`otel_agent_processors` variable.
 
 A "processor" allows you to process the data in some way before it is sent to
 the backend. This includes things like buffering the messages, as well as adding
@@ -160,7 +160,7 @@ host specific information to all the data leaving this collector. How these are
 activated can then be seen in the [Services](#services) section.
 
 **batch** just tries to group multiple messages into one large payload to send
-to the backend. This reduces the amount of packges that need to be sent, which
+to the backend. This reduces the amount of packages that need to be sent, which
 means lower CPU usage and network load.
 ```yaml
 batch:
@@ -191,7 +191,7 @@ resource_detection:
 
 ### Exporters
 This section contains all the configuration that I have added to the
-`otel_agent_exporters` varaiable.
+`otel_agent_exporters` variable.
 
 An "exporter" is a location where you want any collected data to be sent to,
 and in my case I only have a single backend endpoint. However, here we configure
@@ -218,7 +218,7 @@ exporters:
 
 ### Services
 This section contains all the configuration that I have added to the
-`otel_agent_services` varaiable.
+`otel_agent_service` variable.
 
 The most important part here is the "pipelines" bit since it is where you
 connect all the different things you have been defining up until now. Here

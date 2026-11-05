@@ -1,11 +1,6 @@
 ---
-- name: Discover latest version
-  ansible.builtin.set_fact:
-    otel_agent_version: "{{ (lookup('url', otel_agent_latest_url, split_lines=False) | from_json).get('tag_name') | replace('v', '') }}"
-  run_once: true
-  until: otel_agent_version is version('0.0.0', '>=')
-  retries: 10
-  when: otel_agent_version == 'latest'
+- name: Resolve requested OTel Collector version
+  ansible.builtin.include_tasks: resolve_version.yml
 
 - name: Discover installed version
   block:
@@ -22,7 +17,7 @@
 
 - name: Install the OTel Collector binary
   include_tasks: install.yml
-  when: otel_agent_installed_version is version(otel_agent_version, '!=')
+  when: otel_agent_installed_version is version(otel_agent_resolved_version, '!=')
 
 - name: Deploy OpenTelemetry Collector configuration file
   ansible.builtin.template:

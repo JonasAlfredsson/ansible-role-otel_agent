@@ -1,0 +1,70 @@
+---
+# This task file resolves the version of the OpenTelemetry Collector to use, replacing the 'latest'
+# keyword by querying for an actual version number that is needed.
+# This file looks big and complicated, but that is because we need to handle multiple hosts that
+# might be mixed between 'latest' and specific versions, and otherwise we would override these
+# other hosts.
+- name: Initialize resolved version for this role invocation
+  ansible.builtin.set_fact:
+    otel_agent_resolved_version: "{{ otel_agent_version }}"
+    _otel_agent_resolution_latest_url: "{{ otel_agent_latest_url }}"
+
+- name: Reset release metadata for this batch
+  ansible.builtin.set_fact:
+    _otel_agent_release_responses: {}
+  run_once: true
+
+- name: Discover latest release metadata for each required URL
+  ansible.builtin.set_fact:
+    _otel_agent_release_responses: >-
+      {{
+        _otel_agent_release_responses
+        | combine({
+            item: lookup('url', item, split_lines=False) | from_json
+          })
+      }}
+  loop: >-
+    {{
+      ansible_play_batch
+      | map('extract', hostvars)
+      | selectattr('otel_agent_resolved_version', 'defined')
+      | selectattr('otel_agent_resolved_version', 'equalto', 'latest')
+      | selectattr('_otel_agent_resolution_latest_url', 'defined')
+      | map(attribute='_otel_agent_resolution_latest_url')
+      | unique
+      | list
+    }}
+  run_once: true
+  retries: 10
+  until: >-
+    _otel_agent_release_responses[item] is mapping
+    and 'tag_name' in _otel_agent_release_responses[item]
+    and _otel_agent_release_responses[item]['tag_name'] is string
+    and _otel_agent_release_responses[item]['tag_name'] is match('^v?[0-9]+[.][0-9]+[.][0-9]+$')
+
+- name: Validate latest release response objects
+  ansible.builtin.assert:
+    that:
+      - item.value is mapping
+    fail_msg: "Latest release endpoint {{ item.key }} must return a JSON object."
+  loop: "{{ _otel_agent_release_responses | dict2items }}"
+  run_once: true
+
+- name: Validate latest release tags
+  ansible.builtin.assert:
+    that:
+      - "'tag_name' in item.value"
+      - item.value['tag_name'] is string
+      - item.value['tag_name'] is match('^v?[0-9]+[.][0-9]+[.][0-9]+$')
+    fail_msg: "Latest release endpoint {{ item.key }} must return a three-part numeric tag_name."
+  loop: "{{ _otel_agent_release_responses | dict2items }}"
+  run_once: true
+
+- name: Resolve latest version for each requesting host
+  ansible.builtin.set_fact:
+    otel_agent_resolved_version: >-
+      {{
+        _otel_agent_release_responses[_otel_agent_resolution_latest_url]['tag_name']
+        | regex_replace('^v', '')
+      }}
+  when: otel_agent_resolved_version == 'latest'
