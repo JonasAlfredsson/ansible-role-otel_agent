@@ -4,7 +4,9 @@ otel_agent_type: contrib
 
 # OpenTelemetry Collector service configuration
 otel_agent_service_name: "otel-collector-agent"
-otel_agent_installation_dir: "/etc/otel-collector-agent"
+# This dedicated directory contains the complete replaceable distribution payload.
+otel_agent_installation_dir: "/opt/otel-collector-agent"
+otel_agent_config_dir: "/etc/otel-collector-agent"
 
 # Download information for the OpenTelemetry Collector binary
 otel_agent_executable: "{% if otel_agent_type == 'contrib' %}otelcol-contrib{% else %}otelcol{% endif %}"

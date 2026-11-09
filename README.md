@@ -46,11 +46,12 @@ main playbook like this:
 ## Usage
 
 The role in itself is quite simple, and the main variables you might want to
-change are those related to choosing version and install location:
+change are those related to choosing the version and directories:
 
 ```yaml
 otel_agent_version: "latest"
-otel_agent_installation_dir: "/etc/otel-collector-agent"
+otel_agent_installation_dir: "/opt/otel-collector-agent"
+otel_agent_config_dir: "/etc/otel-collector-agent"
 ```
 
 However, what is more interesting is to configure the OTel collector to behave

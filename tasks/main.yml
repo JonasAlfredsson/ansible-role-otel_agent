@@ -19,10 +19,18 @@
   include_tasks: install.yml
   when: otel_agent_installed_version is version(otel_agent_resolved_version, '!=')
 
+- name: Create OpenTelemetry Collector configuration directory
+  ansible.builtin.file:
+    path: "{{ otel_agent_config_dir }}"
+    state: directory
+    mode: '0755'
+    owner: "root"
+    group: "root"
+
 - name: Deploy OpenTelemetry Collector configuration file
   ansible.builtin.template:
     src: otel_agent_config.yml.j2
-    dest: "{{ otel_agent_installation_dir }}/config.yml"
+    dest: "{{ otel_agent_config_dir }}/config.yml"
     owner: "root"
     group: "root"
     mode: '0640'
@@ -45,5 +53,5 @@
   ansible.builtin.service:
     name: "{{ otel_agent_service_name }}"
     enabled: yes
-    state: "{{ 'restarted' if otel_agent_config.changed or otel_agent_service_unit.changed else 'started' }}"
+    state: "{{ 'restarted' if otel_agent_installed_version is version(otel_agent_resolved_version, '!=') or otel_agent_config.changed or otel_agent_service_unit.changed else 'started' }}"
   ignore_errors: '{{ ansible_check_mode | bool }}'
