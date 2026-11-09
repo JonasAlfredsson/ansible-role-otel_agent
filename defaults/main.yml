@@ -13,10 +13,10 @@ otel_agent_executable: "{% if otel_agent_type == 'contrib' %}otelcol-contrib{% e
 arch_mapping:
   x86_64: amd64
   aarch64: arm64
-  armv7l: armhf
-  i386: i386
+  armv7l: armv7
+  i386: "386"
   ppc64le: ppc64le
-otel_agent_arch: "{{ arch_mapping[ansible_facts['architecture']] | default('amd64') }}"
+otel_agent_arch: "{{ arch_mapping.get(ansible_facts['architecture'], ansible_facts['architecture']) }}"
 otel_agent_binary_url: "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v{{ otel_agent_resolved_version }}/{% if otel_agent_type == 'contrib' %}otelcol-contrib_{{ otel_agent_resolved_version }}_linux_{{ otel_agent_arch }}{% else %}otelcol_{{ otel_agent_resolved_version }}_linux_{{ otel_agent_arch }}{% endif %}.tar.gz"
 otel_agent_latest_url: 'https://api.github.com/repos/open-telemetry/opentelemetry-collector-releases/releases/latest'
 
