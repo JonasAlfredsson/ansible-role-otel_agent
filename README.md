@@ -114,7 +114,7 @@ host_metrics/fast:
     memory: null
     network:
       exclude:
-        interfaces: [lo, docker0, veth.*, br-.*, cni*]
+        interfaces: ['^lo$', '^docker0$', '^veth.*', '^br-.*', '^cni.*']
         match_type: regexp
 
 host_metrics/slow:
@@ -200,21 +200,20 @@ retries and the queue, which works in tandem with the **batch**
 [processor](#processors) to buffer packages in case of network issues.
 
 ```yaml
-exporters:
-  otlp_grpc/backend:
-    compression: gzip
-    endpoint: http://192.168.0.2:4317
-    retry_on_failure:
-      enabled: true
-      initial_interval: 5s
-      max_elapsed_time: 5m
-      max_interval: 30s
-    sending_queue:
-      enabled: true
-      num_consumers: 4
-      queue_size: 1000
-    tls:
-      insecure: true
+otlp_grpc/backend:
+  compression: gzip
+  endpoint: http://192.168.0.2:4317
+  retry_on_failure:
+    enabled: true
+    initial_interval: 5s
+    max_elapsed_time: 5m
+    max_interval: 30s
+  sending_queue:
+    enabled: true
+    num_consumers: 4
+    queue_size: 1000
+  tls:
+    insecure: true
 ```
 
 ### Services
