@@ -96,9 +96,9 @@ otlp:
       endpoint: 127.0.0.1:4318
 ```
 
-> Read the [Docker Workaround](#docker-workaround) section to get a solution
-> on how to NOT expose the collector's ports outside localhost, while still
-> routing the Docker container traffic to it.
+> Read the [Docker Workaround](#docker-workaround) section for an example of
+> allowing containers to reach the collector without binding its receivers
+> to the host's **external** IP address.
 
 **host_metrics** is a receiver which is able to collect data about your host
 machine. I have actually split it into two separate receivers, one "fast" and
@@ -257,7 +257,58 @@ pipelines:
 ```
 
 ### Docker Workaround
-TODO
+
+On Linux, containers using Docker bridge networking cannot connect to an OTel
+receiver agent bound to the host's `127.0.0.1` address, since inside a container
+that address refers to the container itself. Binding the OTel agent to the
+host's external IP, or all interfaces, could expose them beyond the intended
+clients which might not be desirable.
+
+An alternative is to assign a "custom" private IP address to the host's
+loopback interface and bind the agent to that address instead. Containers
+on different bridge networks can then use the same host-side address without
+joining a shared Docker network or requiring additional port-forwarding rules,
+as well a just working as usual for any host native service.
+
+For example, on a host already using Netplan with the `networkd` renderer,
+merge the following loopback configuration into the existing configuration:
+
+```yaml
+network:
+  version: 2
+  ethernets:
+    lo:
+      addresses:
+        - "127.0.0.1/8"
+        - "::1/128"
+        - "169.254.163.145/32" # Custom Link-local address for OTel agent
+```
+
+Replace `169.254.163.145` with an unused private address that is not part of
+any route that might interfere (link-local addresses should be easy and
+convenient to hijack for this purpose). Apply the network changes before
+continuing.
+
+Update this role's `otel_agent_receivers` to use this specific address instead:
+
+```yaml
+otlp:
+  protocols:
+    grpc:
+      endpoint: 169.254.163.145:4317
+    http:
+      endpoint: 169.254.163.145:4318
+```
+
+You then just point to this address instead of `localhost` in all your other
+services that send OTel data:
+
+```yaml
+environment:
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://169.254.163.145:4317"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+```
+
 
 
 
