@@ -14,15 +14,13 @@
     _otel_agent_release_responses: {}
   run_once: true
 
-- name: Discover latest release metadata for each required URL
-  ansible.builtin.set_fact:
-    _otel_agent_release_responses: >-
-      {{
-        _otel_agent_release_responses
-        | combine({
-            item: lookup('url', item, split_lines=False) | from_json
-          })
-      }}
+- name: Fetch latest release metadata for each required URL
+  ansible.builtin.uri:
+    url: "{{ item }}"
+    method: GET
+    headers:
+      Accept: application/json
+    timeout: 10
   loop: >-
     {{
       ansible_play_batch
@@ -35,12 +33,33 @@
       | list
     }}
   run_once: true
+  delegate_to: localhost
+  become: false
+  check_mode: false
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  register: _otel_agent_release_fetch
   retries: 10
   until: >-
-    _otel_agent_release_responses[item] is mapping
-    and 'tag_name' in _otel_agent_release_responses[item]
-    and _otel_agent_release_responses[item]['tag_name'] is string
-    and _otel_agent_release_responses[item]['tag_name'] is match('^v?[0-9]+[.][0-9]+[.][0-9]+$')
+    _otel_agent_release_fetch is defined
+    and _otel_agent_release_fetch is mapping
+    and 'status' in _otel_agent_release_fetch
+    and _otel_agent_release_fetch['status'] == 200
+    and 'json' in _otel_agent_release_fetch
+    and _otel_agent_release_fetch['json'] is mapping
+    and 'tag_name' in _otel_agent_release_fetch['json']
+    and _otel_agent_release_fetch['json']['tag_name'] is string
+    and _otel_agent_release_fetch['json']['tag_name'] is match('^v?[0-9]+[.][0-9]+[.][0-9]+$')
+
+- name: Collect latest release metadata
+  ansible.builtin.set_fact:
+    _otel_agent_release_responses: >-
+      {{
+        _otel_agent_release_responses
+        | combine({item.item: item.json})
+      }}
+  loop: "{{ _otel_agent_release_fetch.results }}"
+  run_once: true
 
 - name: Validate latest release response objects
   ansible.builtin.assert:

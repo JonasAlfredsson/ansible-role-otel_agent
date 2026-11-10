@@ -2,18 +2,38 @@
 - name: Resolve requested OTel Collector version
   ansible.builtin.include_tasks: resolve_version.yml
 
+- name: Check whether the installed executable exists
+  ansible.builtin.stat:
+    path: "{{ otel_agent_installation_dir }}/{{ otel_agent_executable }}"
+    follow: true
+    get_checksum: false
+    get_mime: false
+    get_attributes: false
+  register: otel_agent_executable_stat
+
+- name: Set installed version to absent when the executable is missing
+  ansible.builtin.set_fact:
+    otel_agent_installed_version: "0.0.0"
+  when: not otel_agent_executable_stat.stat.exists
+
 - name: Discover installed version
+  when: otel_agent_executable_stat.stat.exists
   block:
     - name: Get installed version
       ansible.builtin.command: '{{ otel_agent_installation_dir }}/{{ otel_agent_executable }} -v'
       register: otel_agent_version_check
       changed_when: false
-      failed_when: false
       check_mode: false  # Always run, this does not change anything on the system
 
-    - name: Set installed version variable
+    - name: Parse installed version from command output
       ansible.builtin.set_fact:
-        otel_agent_installed_version: "{{ otel_agent_version_check.stdout_lines[0] | default('otelcorecol version 0.0.0') | ansible.builtin.regex_search('\\d+\\.\\d+\\.\\d+') }}"
+        otel_agent_installed_version: "{{ otel_agent_version_check.stdout_lines[0] | default('') | ansible.builtin.regex_search('\\d+\\.\\d+\\.\\d+') }}"
+
+    - name: Verify installed version was recognized
+      ansible.builtin.assert:
+        that:
+          - "otel_agent_installed_version is string and otel_agent_installed_version is match('^\\d+\\.\\d+\\.\\d+$')"
+        fail_msg: "Could not detect a three-part numeric version from the installed OpenTelemetry Collector output."
 
 - name: Install the OTel Collector binary
   include_tasks: install.yml

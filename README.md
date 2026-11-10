@@ -54,6 +54,9 @@ otel_agent_installation_dir: "/opt/otel-collector-agent"
 otel_agent_config_dir: "/etc/otel-collector-agent"
 ```
 
+> When `otel_agent_version` is `"latest"`, the role will query the
+> `otel_agent_latest_url` endpoint in order to resolve the latest version.
+
 However, what is more interesting is to configure the OTel collector to behave
 as you want. Thanks to the config file being YAML it is enables extreme freedom
 here where you can just populate the following variables with the exact settings
@@ -169,9 +172,10 @@ batch:
   timeout: 1s
 ```
 
-**memory_limiter** is a safety net to drop incoming messages in case the host's
-RAM usage is nearing the limit, so that the collector is not the reason to
-something gets killed.
+**memory_limiter** monitors memory used by the Collector process, not overall
+host memory pressure. When its configured limits are reached, it refuses
+incoming data, which can create backpressure in the pipeline. Choose limits with
+the resources shared by other host processes in mind.
 ```yaml
 memory_limiter:
   check_interval: 1s
